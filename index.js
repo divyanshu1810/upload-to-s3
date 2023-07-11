@@ -38,6 +38,7 @@ const uploadToS3 = (fileData) => {
     const params = {
       Bucket: process.env.AWS_S3_BUCKET_NAME,
       Key: `${Date.now().toString()}.jpg`,
+      name: `${fileData.name}`,
       Body: fileData,
     };
     S3.upload(params, (error, data) => {
@@ -77,19 +78,27 @@ app.post("/upload", upload.single("image"), (req, res) => {
 app.post("/uploads", upload.array("images", 3), (req, res) => {
   console.log(req.files);
   if (req.files && req.files.length > 0) {
-    for (let i = 0; i < req.files.length; i++) {
-      uploadToS3(req.files[i].buffer)
-        .then((result) => {
-          console.log({ imageURL: result.Location, bucket: result.Bucket });
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+    try {
+      for (let i = 0; i < req.files.length; i++) {
+        uploadToS3(req.files[i].buffer)
+          .then((result) => {
+            console.log({ imageURL: result.Location, bucket: result.Bucket });
+          })
+          .catch((error) => {
+            console.log(error);
+          });
+      }
+      res.status(200).send({
+        success: true,
+        message: `${req.files.length} files uploaded succesfully`,
+      });
+    } catch (error) {
+      res.status(500).send({
+        success: false,
+        message: "something went wrong",
+        error: error,
+      });
     }
-    res.status(200).send({
-      success: true,
-      message: `${req.files.length} files uploaded succesfully`,
-    });
   } else {
     res.status(500).send({
       success: false,
